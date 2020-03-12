@@ -5,9 +5,23 @@ import argparse
 
 import posenet
 
+class Rep: 
+    def __init__(self):
+        this.top = 0 
+        this.bottom = [] 
+        this.uROM = 0 
+        this.dROM = 0 
+        this.uDur = 0 
+        this.dDur = 0 
+        this.uVel = 0 
+        this.dVel =  0
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--model', type=int, default=101)
-parser.add_argument('--cam_id', type=int, default=0)
+
+### Made into string to recognize video file path 
+parser.add_argument('--cam_id', type=str, default=0)
+
 parser.add_argument('--cam_width', type=int, default=1280)
 parser.add_argument('--cam_height', type=int, default=720)
 parser.add_argument('--scale_factor', type=float, default=0.7125)
