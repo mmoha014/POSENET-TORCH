@@ -1,3 +1,8 @@
+# Changes
+1- Utils.py in posenet directory
+2- demo_image.py
+I will use class after confirmation of the method by Dr. Jain.
+
 ## PoseNet Pytorch
 
 This repository contains a PyTorch implementation (multi-pose only) of the Google TensorFlow.js Posenet model.
