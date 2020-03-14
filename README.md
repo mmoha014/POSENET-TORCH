@@ -1,6 +1,10 @@
 # Changes
 1- Utils.py in posenet directory-> change of treshold when exercise changes: utils.py -> cluster function
 
+**Threshold**
+* Bicept: 100
+* Another exercise:60
+
 2- demo_image.py
 
 I will use class after confirmation of the method by Dr. Jain.
