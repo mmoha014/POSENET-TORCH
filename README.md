@@ -1,5 +1,5 @@
 # Changes
-1- Utils.py in posenet directory
+1- Utils.py in posenet directory-> change of treshold when exercise changes: utils.py -> cluster function
 
 2- demo_image.py
 
