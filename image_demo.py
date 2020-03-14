@@ -6,6 +6,49 @@ import torch
 
 import posenet
 import random
+"""
+PoseNet
+0: nose
+1: right eye
+2: left eye
+3: right ear
+4: left ear
+5: right shoulder
+6: left shoulder
+7: right elbow
+8: left elbow
+9: right wrist
+10: left wrist
+11: right hip
+12: left hip
+13: right knee
+14: left knee
+15: right ankle
+16: left ankle
+"""
+index=0
+points = []
+right_wrist=[]
+angle = []
+max_c =0
+min_c=1000
+index_max = 0
+index_min = 0
+peaks = []
+romUpDwn = []
+romDwnUp = []
+top = 0
+down = 0
+reps = 0
+half_rep_count = 0
+VUpDwn = [] #Velocity UpDwn
+VDwnUp = [] #Velocity DwnUp
+DDwnUp = [] #Duration DwnUp
+DUpDwn = [] # Duration UpDwn
+ts = 0
+time_recorder = []
+
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--model', type=int, default=101)
@@ -27,7 +70,7 @@ def main():
 
     filenames = [
         f.path for f in os.scandir(args.image_dir) if f.is_file() and f.path.endswith(('.png', '.jpg'))]
-    cap = cv2.VideoCapture('/home/mgharasu/Documents/Noah_project/GT_creator/Wo14.MOV')
+    cap = cv2.VideoCapture('/home/mgharasu/Videos/Wo17.avi')#'/home/mgharasu/Documents/Noah_project/GT_creator/Wo14.MOV')
 
     start = time.time()
     # for f in filenames:
@@ -35,7 +78,8 @@ def main():
     for i in range(len(posenet.PART_NAMES)):
         colors.append((random.randint(0,255),random.randint(0,255),random.randint(0,255)))
     while True:
-        ret, img = cap.read()
+        ret, frame = cap.read()
+        img =  cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
         
         if not ret:
             break
@@ -62,17 +106,10 @@ def main():
         if args.output_dir:
             draw_image = posenet.draw_skel_and_kp(
                 draw_image, pose_scores, keypoint_scores, keypoint_coords,
-                min_pose_score=0.25, min_part_score=0.25)
+                min_pose_score=0.0, min_part_score=0.0)
 
-            for pi in range(len(pose_scores)):
-                if pose_scores[pi]==0:
-                    break
-                    
-            for i,c in enumerate(keypoint_coords[pi,:,:]):
-                draw_image = cv2.circle(draw_image,(int(c[1]),int(c[0])),2,colors[i], 2)
-            # cv2.imwrite(os.path.join(args.output_dir, os.path.relpath(f, args.image_dir)), draw_image)
-        cv2.imshow("output", draw_image)
-        cv2.waitKey(1)
+            
+           
         # if not args.notxt:
         #     print()
         #     print("Results for image: %s" % f)
