@@ -3,6 +3,7 @@ output/*
 .idea/*
 .idea
 _models/*
+.vscode/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

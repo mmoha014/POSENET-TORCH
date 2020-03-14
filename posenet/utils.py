@@ -14,6 +14,18 @@ ts = time.time()
 # from fastdtw import fastdtw
 
 
+class Rep: 
+    def __init__(self):
+        this.top = 0 
+        this.bottom = [] 
+        this.uROM = 0 
+        this.dROM = 0 
+        this.uDur = 0 
+        this.dDur = 0 
+        this.uVel = 0 
+        this.dVel = 0
+
+
 def valid_resolution(width, height, output_stride=16):
     target_width = (int(width) // output_stride) * output_stride + 1
     target_height = (int(height) // output_stride) * output_stride + 1
@@ -34,6 +46,12 @@ def _process_input(source_img, scale_factor=1.0, output_stride=16):
 
 def read_cap(cap, scale_factor=1.0, output_stride=16):
     res, img = cap.read()
+
+    ### Rotates Loaded Video 
+    img = cv2.resize(img, (1000, 640), interpolation = cv2.INTER_AREA)
+    cv2.transpose(img, img)
+    img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
+
     if not res:
         raise IOError("webcam failure")
     return _process_input(img, scale_factor, output_stride)
@@ -219,7 +237,7 @@ def draw_skel_and_kp(
 
     out_img = img
     adjacent_keypoints = []
-    cv_keypoints = []
+    cv_keypoints = []                                                 
     for ii, score in enumerate(instance_scores):
         if score < 0.0:#min_pose_score:
             continue
@@ -302,7 +320,15 @@ def draw_skel_and_kp(
         out_img = cv2.drawKeypoints(
             out_img, cv_keypoints, outImage=np.array([]), color=(255, 255, 0),
             flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+<<<<<<< HEAD
 
     # out_img = cv2.polylines(out_img, adjacent_keypoints, isClosed=False, color=(255, 255, 0))
+=======
+    out_img = cv2.polylines(out_img, adjacent_keypoints, isClosed=False, color=(255, 255, 0))
+    
+    if len(cv_keypoints) > 9:
+        print (cv_keypoints[9].pt[1])
+        cv2.circle(out_img, (int(cv_keypoints[9].pt[0]), int(cv_keypoints[9].pt[1])), 2, (100, 255, 0), 2)
+>>>>>>> d32c96ecb457fc596829cb7abcc5c0738e20a294
     return out_img
 
