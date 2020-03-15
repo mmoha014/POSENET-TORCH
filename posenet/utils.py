@@ -4,14 +4,16 @@ import numpy as np
 import random
 # from new_vars import index, gt_bicept_curl
 import time
-from image_demo import index, points, angle, max_c, min_c,index_min,index_max, peaks, right_wrist, top, down, romUpDwn, romDwnUp, reps, half_rep_count,VDwnUp,VUpDwn,DDwnUp, DUpDwn, ts, time_recorder
+from metrics import RHand, LHand
 import posenet.constants
 from kmeans import km_main
+from tracking import C_TRACKER
+# from image_demo import 
 
-global ts
-ts = time.time()
-# from scipy.spatial.distance import euclidean
-# from fastdtw import fastdtw
+# global RHand, LHand
+
+# RHand.ts = time.time()
+# LHand.ts = time.time()
 
 
 class Rep: 
@@ -113,6 +115,7 @@ def getTime(time1=0):
         interval = time.time() - time1
         return time.time(), interval
 
+
 def getAngle(a, b, c):
     ang = math.degrees(math.atan2(c[1]-b[1], c[0]-b[0]) - math.atan2(a[1]-b[1], a[0]-b[0]))
     return ang + 360 if ang < 0 else ang
@@ -133,103 +136,128 @@ def angle_between_points( p0, p1, p2 ):
   c= c if c>0 else 1.0  
   return math.acos( (a+b-c) / math.sqrt(4*a*b) ) * 180/math.pi
 
-def cluster(ang): 
-    global max_c, min_c, index_min,index_max, index , peaks, right_wrist, top, down, romUpDwn, romDwnUp, reps, half_rep_count,VDwn,VUp, DDwn, DUp, ts
-    if len(ang)>2:
-        X=np.array(ang).reshape((-1,1))
+def cluster(hands): 
+    if len(hands.angle)>2:
+        X=np.array(hands.angle).reshape((-1,1))
         km =km_main(X,2)
         # print(km,"-",max_c-min_c,"\n")
         # return False
-        if km[0]<min_c and km[0]!=0:
-            min_c = km[0]            
+        if km[0]<hands.min_c and km[0]!=0:
+            hands.min_c = km[0]            
             # index_min = index
-        elif km[1]<min_c and km[1]!=0:
-            min_c=km[1]
+        elif km[1]<hands.min_c and km[1]!=0:
+            hands.min_c=km[1]
             # index_min = index
         
-        if km[0]>max_c and km[0]!=0:
-            max_c=km[0]
+        if km[0]>hands.max_c and km[0]!=0:
+            hands.max_c=km[0]
             # index_max=index
-        elif km[1]>max_c and km[1]!=0:
-            max_c=km[1]
-            # index_max=index
-        
-        global angle
-        # if abs(km[0]-km[1])>100:
-        #     # print("cut")           
-        #     angle=[]
-        #     max_c=0
-        #     min_c=1000
+        elif km[1]>hands.max_c and km[1]!=0:
+            hands.max_c=km[1]
 
-        if (max_c-min_c)>60:            
-            # peaks.append([index_min,index_max])
-            # print(index_min,index_max)
-            half_rep_count += 1
-            reps += 1 if half_rep_count%2==0 else 0
-            tc, duration = getTime(ts)
-            if angle[-1]>=90:
-                # motion: up to down
-                top = min(right_wrist[index-len(angle):])
-                if down != 0:
-                    romDwnUp.append(abs(top-down))
-                    DDwnUp.append(duration)
-                    VDwnUp.append(romDwnUp[-1]/duration)
-                    # print(duration)
-            else:
-                # motion: down to top
-                down = max(right_wrist[index-len(angle):])
-                if top!=0:
-                    romUpDwn.append(abs(top-down))
-                    DUpDwn.append(duration)
-                    VUpDwn.append(romUpDwn[-1]/duration)
-                    # print(duration)
-            ts = tc    
-            max_c=0
-            min_c=1000
-            angle=[]
+
+        if (hands.max_c-hands.min_c)>90:            
+            return True
+        
+    return False
             
 
             # print("angle",angle)
             # return True
 
-def fit_model_for_rep_count(data):  
-    xrw = [] #x_right_wrist
-    yrw = [] #y_right_wrist
-    xlw = [] #x_left_wrist
-    ylw = [] #y_left_wrist
-    cut_data = data[-1]
-    x=[]
-    y=[]
-    # for i in range(len(data)):
-    #     x.append(data[i][9][0])
-    #     y.append(data[i][9][1])
-
-    # for i in range(np.shape(cut_data)[0]):
-    #     xrw.append(np.array(cut_data[i][9][0])) # right wrist
-    #     yrw.append(np.array(cut_data[i][9][1]))
-    #     xlw.append(np.array(cut_data[i][10][0]))
-    #     ylw.append(np.array(cut_data[i][10][1]))
-
-    # print(np.var([xrw,yrw]))
-    #print(getAngle(cut_data[0][5], cut_data[0][7],cut_data[0][9])) # order of lines is important->change a and b makes the angle terrible (no change alot)
+def fit_model_for_rep_count( hands, L_or_R):      
     
-    global angle, right_wrist
-    # cv_keypoints[7].pt[0]
-    right_wrist.append(data[-1][9].pt[1])#data[-1][9][1])
     # print(right_wrist[-1])
-    ang = angle_between_points(data[-1][5].pt, data[-1][7].pt,data[-1][9].pt)
+    if L_or_R=='R':
+        hands.wrist.append(hands.points[-1][9].pt[1])
+        ang = angle_between_points(hands.points[-1][5].pt, hands.points[-1][7].pt,hands.points[-1][9].pt)
+    else:
+        hands.wrist.append(hands.points[-1][10].pt[1])
+        ang = angle_between_points(hands.points[-1][6].pt, hands.points[-1][8].pt,hands.points[-1][10].pt)
+
     # print(ang,",")
-    angle.append(ang)
-    # if (len(angle))>30:
-    #     xp = np.array(angle[-30:]).reshape((-1,1))
-    #     yp = np.arange(len(xp))
-    #     _x,model = myfit(xp,yp)
-    #     print(model.coef_)
-    #     a=0
+    hands.angle.append(ang)
+  
+    return cluster(hands)
+
+# def detection_rep(rhand, lhand):
+
+def peak_finder(sub_list, time_recorder, mode='top'):
+    if mode =='top':
+        value = min(sub_list)
+    else:
+        value = max(sub_list)
+
+    idx=np.where(sub_list == value)
+    # t2 = idx[0][0]/len(sub_list)*duration
+    i = len(time_recorder)-len(sub_list)+idx[0][0]
+    t2 = np.sum(time_recorder[:i])
+    return value, t2, i#dx[0][0]    
+
+def rep_detect(rhand, lhand):
+    # peaks.append([index_min,index_max])
+    # print(index_min,index_max)
+    rhand.half_rep_count += 1
+    lhand.half_rep_count += 1
+
+    rhand.reps += 1 if rhand.half_rep_count%2==0 else 0
+    lhand.reps += 1 if rhand.half_rep_count%2==0 else 0
+                  
+    # r_tc, r_duration = getTime(rhand.ts)
+    # l_tc, l_duration = r_tc, r_duration
+
+    if rhand.angle[-1]>=90 and lhand.angle[-1]>=90:
+        # motion: down to top
+        sub_list = np.array(rhand.wrist[rhand.index-len(rhand.angle):])
+        rhand.top, r_duration, r_idx = peak_finder(sub_list, rhand.time_recorder, 'top')
+
+        sub_list = np.array(lhand.wrist[lhand.index-len(lhand.angle):])
+        lhand.top, l_duration, l_idx = peak_finder(sub_list, lhand.time_recorder, 'top')
     
-    # a=copy.deepcopy(angle)
+        if rhand.half_rep_count>1 and lhand.half_rep_count>1:#rhand.top!=0 and lhand.top != 0:
+            rhand.romDwnUp.append(abs(rhand.top-rhand.down))
+            lhand.romDwnUp.append(abs(lhand.top-lhand.down))
     
-    cluster(angle)
+            rhand.DDwnUp.append(r_duration)
+            lhand.DDwnUp.append(l_duration)
+    
+            rhand.VDwnUp.append(rhand.romDwnUp[-1]/r_duration)
+            lhand.VDwnUp.append(lhand.romDwnUp[-1]/l_duration)
+        
+    else:
+        # motion: up to down
+        sub_list = np.array(rhand.wrist[rhand.index-len(rhand.angle):])
+        rhand.down, r_duration, r_idx = peak_finder(sub_list,rhand.time_recorder,'down')
+        
+        sub_list = np.array(lhand.wrist[lhand.index-len(lhand.angle):])
+        lhand.down, l_duration, l_idx = peak_finder(sub_list,lhand.time_recorder,'down')
+        
+    
+        if rhand.half_rep_count>1 and lhand.half_rep_count>1:#rhand.down != 0 and lhand.down!=0:
+    
+            rhand.romUpDwn.append(abs(rhand.top-rhand.down))
+            lhand.romUpDwn.append(abs(lhand.top-lhand.down))
+    
+            rhand.DUpDwn.append(r_duration)
+            lhand.DUpDwn.append(l_duration)
+    
+            rhand.VUpDwn.append(rhand.romUpDwn[-1]/r_duration)
+            lhand.VUpDwn.append(lhand.romUpDwn[-1]/r_duration)
+            
+            # print(duration)        
+
+
+    # rhand.ts = time.time()    
+    rhand.max_c=0
+    rhand.min_c=1000
+    rhand.angle=[]
+    rhand.time_recorder = rhand.time_recorder[r_idx:]
+
+    # lhand.ts = time.time()    
+    lhand.max_c=0
+    lhand.min_c=1000
+    lhand.angle=[]
+    lhand.time_recorder = lhand.time_recorder[l_idx:]
 
 def draw_skel_and_kp(
         img, instance_scores, keypoint_scores, keypoint_coords,
@@ -250,22 +278,26 @@ def draw_skel_and_kp(
             if ks < 0.0:#min_part_score:
                 continue
             cv_keypoints.append(cv2.KeyPoint(kc[1], kc[0], 10. * ks))
-    
+    # def Start_process(img,cv_keypoints,)
     #"###################### added code #######################"
-    global index, points, index, reps, romUpDwn, romDwnUp
-    # index += 1
-    # global index, points
-    index += 1
+    # global RHand, LHand
+    LHand.index += 1
+    RHand.index += 1
     # print("index = ", str(index))
-    if index == 1:
-        points.append(np.array(cv_keypoints))
-    points.append(np.array(cv_keypoints))
-    if index >= 1:
-        fit_model_for_rep_count(points)
+    if RHand.index == 1:
+        RHand.points.append(np.array(cv_keypoints))        
+        LHand.points.append(np.array(cv_keypoints)) 
+    RHand.points.append(np.array(cv_keypoints))
+    LHand.points.append(np.array(cv_keypoints))
+
+    if RHand.index >= 1:
+        rrep_found = fit_model_for_rep_count(RHand,'R')
+        lrep_found = fit_model_for_rep_count(LHand,'L')
+
+        if rrep_found and lrep_found:
+            rep_detect(RHand,LHand)
     
     
-
-
     label={
         '0': 'nose',
         '1': 'right eye',
@@ -288,25 +320,36 @@ def draw_skel_and_kp(
     right_elbow = [int(cv_keypoints[7].pt[0]), int(cv_keypoints[7].pt[1])]
     right_shoulder = [int(cv_keypoints[5].pt[0]), int(cv_keypoints[5].pt[1])]
     right_wrist = [int(cv_keypoints[9].pt[0]), int(cv_keypoints[9].pt[1])]
+
+    left_elbow = [int(cv_keypoints[8].pt[0]), int(cv_keypoints[8].pt[1])]
+    left_shoulder = [int(cv_keypoints[6].pt[0]), int(cv_keypoints[6].pt[1])]
+    left_wrist = [int(cv_keypoints[10].pt[0]), int(cv_keypoints[10].pt[1])]
+
     angle=angle_between_points(right_wrist, right_elbow, right_shoulder)
     # global angles
     # print("angle:",angle)
-    out_img = cv2.line(out_img, (right_shoulder[0],right_shoulder[1]), (right_elbow[0],right_elbow[1]), (0,0,255),2)
-    out_img = cv2.line(out_img, (right_wrist[0],right_wrist[1]), (right_elbow[0],right_elbow[1]),(0,150,255), 2)
-    img=cv2.putText(img, str(index),(60,60),cv2.FONT_HERSHEY_SIMPLEX,1,(255,0,255),2)
-    img=cv2.putText(img, 'Reps:'+str(reps),(60,100),cv2.FONT_HERSHEY_SIMPLEX,1,(255,0,255),2)
-    if len(romUpDwn)>0:
-        img=cv2.putText(img, "Range_UpDwn:"+str(romUpDwn[-1]),(10,140),cv2.FONT_HERSHEY_SIMPLEX,.3,(0,0,0),1)
-    if len(romDwnUp)>0:
-        img=cv2.putText(img, "Range_DwnUp:"+str(romDwnUp[-1]),(10,160),cv2.FONT_HERSHEY_SIMPLEX,.3,(0,0,0),1)
-    if len(DUpDwn)>0:
-        img=cv2.putText(img, "Duration_UpDwn:"+str(DUpDwn[-1]),(10,180),cv2.FONT_HERSHEY_SIMPLEX,.3,(0,0,0),1)
-    if len(DDwnUp)>0:
-        img=cv2.putText(img, "Duration_DwnUp:"+str(DDwnUp[-1]),(10,200),cv2.FONT_HERSHEY_SIMPLEX,.3,(0,0,0),1)
-    if len(VDwnUp)>0:
-        img=cv2.putText(img, "Velocity_DwnUp:"+str(VDwnUp[-1]),(10,220),cv2.FONT_HERSHEY_SIMPLEX,.3,(0,0,0),1)
-    if len(VUpDwn)>0:
-        img=cv2.putText(img, "Velocity_UpDwn:"+str(VUpDwn[-1]),(10,240),cv2.FONT_HERSHEY_SIMPLEX,.3,(0,0,0),1)
+    img = cv2.line(img, (right_shoulder[0],right_shoulder[1]), (right_elbow[0],right_elbow[1]), (0,0,255),2)
+    img = cv2.line(img, (right_wrist[0],right_wrist[1]), (right_elbow[0],right_elbow[1]),(0,150,255), 2)
+
+    img = cv2.line(img, (left_shoulder[0],left_shoulder[1]), (left_elbow[0],left_elbow[1]), (0,0,255),2)
+    img = cv2.line(img, (left_wrist[0],left_wrist[1]), (left_elbow[0],left_elbow[1]),(0,150,255), 2)
+
+    img=cv2.putText(img, str(RHand.index),(10,210),cv2.FONT_HERSHEY_SIMPLEX,1,(255,0,255),2)
+    img=cv2.putText(img, 'Reps:'+str(RHand.reps),(10,230),cv2.FONT_HERSHEY_SIMPLEX,1,(255,0,255),2)
+    if len(RHand.romUpDwn)>0:
+        img=cv2.putText(img, "Range_UpDwn:"+str(RHand.romUpDwn[-1]),(10,40),cv2.FONT_HERSHEY_SIMPLEX,.3,(0,0,0),1)
+    if len(RHand.romDwnUp)>0:
+        img=cv2.putText(img, "Range_DwnUp:"+str(RHand.romDwnUp[-1]),(10,60),cv2.FONT_HERSHEY_SIMPLEX,.3,(0,0,0),1)    
+    img=cv2.putText(img, "================== Duration =====================",(10,80),cv2.FONT_HERSHEY_SIMPLEX,.3,(0,0,0),1)    
+    if len(RHand.DDwnUp)>0:
+        img=cv2.putText(img, "Duration_DwnUp:"+str(RHand.DDwnUp[-1]),(10,100),cv2.FONT_HERSHEY_SIMPLEX,.3,(0,0,0),1)
+    if len(RHand.DUpDwn)>0:
+        img=cv2.putText(img, "Duration_UpDwn:"+str(RHand.DUpDwn[-1]),(10,120),cv2.FONT_HERSHEY_SIMPLEX,.3,(0,0,0),1)    
+    img=cv2.putText(img, "================== Velocity =====================",(10,140),cv2.FONT_HERSHEY_SIMPLEX,.3,(0,0,0),1)        
+    if len(RHand.VDwnUp)>0:
+        img=cv2.putText(img, "Velocity_DwnUp:"+str(RHand.VDwnUp[-1]),(10,160),cv2.FONT_HERSHEY_SIMPLEX,.3,(0,0,0),1)
+    if len(RHand.VUpDwn)>0:
+        img=cv2.putText(img, "Velocity_UpDwn:"+str(RHand.VUpDwn[-1]),(10,180),cv2.FONT_HERSHEY_SIMPLEX,.3,(0,0,0),1)
 
     for i,kp in enumerate(cv_keypoints):
         if i<17:
@@ -314,21 +357,20 @@ def draw_skel_and_kp(
             point = (int(kp.pt[0]), int(kp.pt[1]))
             out_img=cv2.circle(out_img,point,2,colors,2)
             # out_img = cv2.putText(out_img,label[str(i)],point, cv2.FONT_HERSHEY_COMPLEX,0.5,colors,1)
-            cv2.imshow('out',out_img)
-            cv2.waitKey(1)
+            # outputVid.write(out_img)
+    cv2.imshow('out',out_img)
+    cv2.waitKey(1)
     if cv_keypoints:
-        out_img = cv2.drawKeypoints(
-            out_img, cv_keypoints, outImage=np.array([]), color=(255, 255, 0),
-            flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-<<<<<<< HEAD
+        out_img = cv2.drawKeypoints(out_img, cv_keypoints, outImage=np.array([]), color=(255, 255, 0), flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+#<<<<<<< HEAD
 
     # out_img = cv2.polylines(out_img, adjacent_keypoints, isClosed=False, color=(255, 255, 0))
-=======
-    out_img = cv2.polylines(out_img, adjacent_keypoints, isClosed=False, color=(255, 255, 0))
+#=======
+    #out_img = cv2.polylines(out_img, adjacent_keypoints, isClosed=False, color=(255, 255, 0))
     
-    if len(cv_keypoints) > 9:
-        print (cv_keypoints[9].pt[1])
-        cv2.circle(out_img, (int(cv_keypoints[9].pt[0]), int(cv_keypoints[9].pt[1])), 2, (100, 255, 0), 2)
->>>>>>> d32c96ecb457fc596829cb7abcc5c0738e20a294
-    return out_img
+    #if len(cv_keypoints) > 9:
+    #    print (cv_keypoints[9].pt[1])
+    #    cv2.circle(out_img, (int(cv_keypoints[9].pt[0]), int(cv_keypoints[9].pt[1])), 2, (100, 255, 0), 2)
+#>>>>>>> d32c96ecb457fc596829cb7abcc5c0738e20a294
+    return out_img, right_elbow, right_shoulder, right_wrist
 
