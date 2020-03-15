@@ -82,7 +82,7 @@ def main():
             break
         frame_counter += 1
         img =  cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE) 
-        # img = img_resize_scale(img,.6)      
+        img = img_resize_scale(img,.6)      
         
         
         def detector(img):
